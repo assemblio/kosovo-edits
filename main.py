@@ -10,14 +10,14 @@ config = ConfigParser.RawConfigParser()
 config.read('config.cfg')
 
 # getting twitter properties 
-TWITTER_CONSUMER_KEY = config.get('Twitter', 'CONSUMER_KEY')
-TWITTER_CONSUMER_SECRET = config.get('Twitter', 'CONSUMER_SECRET')
-TWITTER_ACCESS_KEY = config.get('Twitter', 'ACCESS_KEY')
-TWITTER_ACCESS_SECRET = config.get('Twitter', 'ACCESS_SECRET')
+TWITTER_API_KEY = config.get('Twitter', 'API_KEY')
+TWITTER_API_SECRET = config.get('Twitter', 'API_SECRET')
+TWITTER_ACCESS_TOKEN = config.get('Twitter', 'ACCESS_TOKEN')
+TWITTER_ACCESS_TOKEN_SECRET = config.get('Twitter', 'ACCESS_TOKEN_SECRET')
 
 # creating twitter api object 
-auth = tweepy.OAuthHandler(TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET)
-auth.set_access_token(TWITTER_ACCESS_KEY, TWITTER_ACCESS_SECRET)
+auth = tweepy.OAuthHandler(TWITTER_API_KEY, TWITTER_API_SECRET)
+auth.set_access_token(TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET)
 api = tweepy.API(auth)
 
 # getting bitly properties
