@@ -2,13 +2,13 @@ from urllib import urlencode
 import urllib2
 import json
 import tweepy, time, sys
-import ConfigParser
+import ConfigParser	
 
 # creating config object
 config = ConfigParser.RawConfigParser()
 config.read('config.cfg')
 
-# get twitter properties 
+# getting twitter properties 
 TWITTER_CONSUMER_KEY = config.get('Twitter', 'CONSUMER_KEY')
 TWITTER_CONSUMER_SECRET = config.get('Twitter', 'CONSUMER_SECRET')
 TWITTER_ACCESS_KEY = config.get('Twitter', 'ACCESS_KEY')
@@ -49,10 +49,10 @@ for revision in revisions:
 
 	# building the twitter message 
 	twitter_message = "%s edited the '%s' article: %s" % (user, title, shortened_url) 
-	print twitter_message 
 	
 	# tweet message
-	
+	api.update_status(twitter_message)
+
 	
 
 
