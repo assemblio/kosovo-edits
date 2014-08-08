@@ -5,7 +5,7 @@ import urllib2
 from urllib import urlencode
 from time import sleep
 
-# creating config object
+# creating config objects
 config = ConfigParser.RawConfigParser()
 config.read('config.cfg')
 
@@ -27,52 +27,66 @@ BITLY_API_KEY = config.get('Bitly', 'API_KEY')
 # Getting the application properties
 SLEEP_TIME = config.get('Application', 'SLEEP_TIME')
 REVISION_TRACKER_FILENAME = config.get('Application', 'REVISION_TRACKER_FILENAME')
+WIKIPEDIA_PAGE_IDS = config.get('Application', 'WIKIPEDIA_PAGE_IDS')
+
+revision_tracker_config = ConfigParser.RawConfigParser()
+revision_tracker_config.read(REVISION_TRACKER_FILENAME)
 
 def run():
 	''' The main program function.
 	'''
-	response = urllib2.urlopen('http://en.wikipedia.org/w/api.php?action=query&prop=revisions&titles=Kosovo&rvlimit=5&rvprop=timestamp|ids|user|comment&format=json')
+	# Build a list of monitored page ids:
+	page_ids = WIKIPEDIA_PAGE_IDS.split('|')
+
+	# Build the GET request URL to hit Wikipedia's API
+	wikipedia_latest_revision_api_request_url = 'http://en.wikipedia.org/w/api.php?action=query&prop=revisions&pageids=%s&rvprop=timestamp|ids|user|comment&format=json' % WIKIPEDIA_PAGE_IDS
+
+	# Get the response from Wikipidia's API
+	response = urllib2.urlopen(wikipedia_latest_revision_api_request_url)
 	json_response = json.load(response)
 
-	# Get the title. 17391 is the id of the 'Kosovo' article.
-	# FIXME: Don't rely on hardcoded value (i.e. 17391).
-	title = json_response['query']['pages']['17391']['title']
+	# Iterate through the revision info of every page listed in the response
+	pages = json_response['query']['pages']
+	
+	for page_id in page_ids:
+		
+		# Get the title.
+		title = json_response['query']['pages'][page_id]['title']
 
-	# Get the revisions. 17391 is the id of the 'Kosovo' article.
-	# FIXME: Don't rely on hardcoded value (i.e. 17391).
-	revisions = json_response['query']['pages']['17391']['revisions']
+		# Get the revisions.
+		revisions = json_response['query']['pages'][page_id]['revisions']
 
-	# For now, we will only check the latest revision.
-	# We'll make the polling occur at a high enough frequency that will minimize the risks of missing a revision.
-	#
-	# TODO: Check older revisions as well to make sure we didn't miss any: this will happen if more than one
-	# revision is submitted between two requests to Wikipedia's API.
-	latest_revision = revisions[0]
+		# For now, we will only check the latest revision.
+		# We'll make the polling occur at a high enough frequency that will minimize the risks of missing a revision.
+		#
+		# TODO: Check older revisions as well to make sure we didn't miss any: this will happen if more than one
+		# revision is submitted between two requests to Wikipedia's API (unlikely to occur, but Murphy's Law!).
+		latest_revision = revisions[0]
 
-	# Only process this revision if we haven't done so already in our last request.
-	# In other words, let's not attempt to make duplicate tweets.
-	if is_new_revision(latest_revision):
+		# Only process this revision if we haven't done so already in our last request.
+		# In other words, let's not attempt to make duplicate tweets.
+		if is_new_revision(page_id, latest_revision):
 
-		# Build revision url. e.g. http://en.wikipedia.org/w/index.php?title=Kosovo&diff=619399922&oldid=619329366
-		url = build_wikipedia_revision_url(title, latest_revision)
+			# Build revision url. e.g. http://en.wikipedia.org/w/index.php?title=Kosovo&diff=619399922&oldid=619329366
+			url = build_wikipedia_revision_url(title, latest_revision)
 
-		# Requesting bitly shortened url of revision url
-		shortened_url = shorten_url(url)
+			# Requesting bitly shortened url of revision url
+			shortened_url = shorten_url(url)
 
-		# building the twitter message 
-		user = latest_revision['user']
-		twitter_message = "%s edited the '%s' article: %s" % (user, title, shortened_url) 
+			# building the twitter message 
+			user = latest_revision['user']
+			twitter_message = "%s edited the '%s' article: %s" % (user, title, shortened_url) 
 
-		print twitter_message
+			print twitter_message
 
-		# tweet message
-		api.update_status(twitter_message)
+			# tweet message
+			#api.update_status(twitter_message)
 
-		# Store the current revision number as the previous revision number.
-		# We do this to check if the next revision we will pull won't be the same one as this one. 
-		# In other words, we will want to check if no new edits were made since the last request.
-		# If no new edits were made since the last request, then we won't tweet anything.
-		store_latest_revision_id(latest_revision)
+			# Store the current revision number as the previous revision number.
+			# We do this to check if the next revision we will pull won't be the same one as this one. 
+			# In other words, we will want to check if no new edits were made since the last request.
+			# If no new edits were made since the last request, then we won't tweet anything.
+			store_latest_revision_id(page_id, latest_revision)
 
 def build_wikipedia_revision_url(article_title, revision):
 	''' Build the wikipedia revision diff URL.
@@ -104,33 +118,36 @@ def shorten_url(url):
 
 	return shortened_url
 
-def is_new_revision(revision):
+def is_new_revision(page_id, revision):
 	''' Checks if the given revision is a new one.
 	:param revision: The revision object.
 	'''
-	current_revision_id = revision['revid']
 
-	with open(REVISION_TRACKER_FILENAME, "r") as revision_tracking_file:
-		previous_revision_id = revision_tracking_file.read()
+	# The current revision for the given page
+	current_revision_id = int(revision['revid'])
+
+	# Get revision processed for the same page but in the previous loop
+	previous_revision_id = int(revision_tracker_config.get('Revisions', str(page_id)))
 
 	# Check if current and previous revision are the same
-	current_revision_is_a_new_revision = int(current_revision_id) != int(previous_revision_id)
+	current_revision_is_a_new_revision = current_revision_id != previous_revision_id
 
 	return current_revision_is_a_new_revision
 
-def store_latest_revision_id(revision):
+def store_latest_revision_id(page_id, revision):
 	''' Store the last revision number.
 	:param revision: The lastest revision.
 	'''
 	
-	#TODO: We will eventually have to handle multiple revisions when we'll want to monitor more than one article.
-	
-	# Get revision id.
+	# Get latest revision id.
 	latest_revision_id = revision['revid']
 
-	# Store it in a file.
-	with open(REVISION_TRACKER_FILENAME, "w") as revision_tracking_file:
-		revision_tracking_file.write(str(latest_revision_id))
+	# Updated config object
+	revision_tracker_config.set('Revisions', str(page_id), str(latest_revision_id))
+
+	# Write update in file
+	with open(REVISION_TRACKER_FILENAME, 'wb') as configfile:
+		revision_tracker_config.write(configfile)
 
 
 # Infinite application loop, commence!
