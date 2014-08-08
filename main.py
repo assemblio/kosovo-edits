@@ -80,7 +80,7 @@ def run():
 			print twitter_message
 
 			# tweet message
-			#api.update_status(twitter_message)
+			api.update_status(twitter_message)
 
 			# Store the current revision number as the previous revision number.
 			# We do this to check if the next revision we will pull won't be the same one as this one. 
