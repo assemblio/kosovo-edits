@@ -2,6 +2,7 @@ import json
 import tweepy
 import ConfigParser
 import urllib2
+import logging
 from urllib import urlencode
 from time import sleep
 
@@ -29,14 +30,25 @@ SLEEP_TIME = config.get('Application', 'SLEEP_TIME')
 REVISION_TRACKER_FILENAME = config.get('Application', 'REVISION_TRACKER_FILENAME')
 WIKIPEDIA_PAGE_IDS = config.get('Application', 'WIKIPEDIA_PAGE_IDS')
 
+# Logging path might be relative or starts from the root.
+# If it's relative then be sure to prepend the path with the application's root directory path.
+LOG_PATH = config.get('Logging', 'PATH')
+LOG_LEVEL = config.get('Logging', 'LEVEL').upper()
+logging.basicConfig(filename=LOG_PATH, level=LOG_LEVEL)
+
 revision_tracker_config = ConfigParser.RawConfigParser()
 revision_tracker_config.read(REVISION_TRACKER_FILENAME)
+
 
 def run():
     ''' The main program function.
     '''
+
+    logging.info("Application started.")
+
     # Build a list of monitored page ids:
     page_ids = WIKIPEDIA_PAGE_IDS.split('|')
+    logging.info("Observing the following pages: " + WIKIPEDIA_PAGE_IDS.replace('|', ', '))
 
     # Build the GET request URL to hit Wikipedia's API
     wikipedia_latest_revision_api_request_url = 'http://en.wikipedia.org/w/api.php?action=query&prop=revisions&pageids=%s&rvprop=timestamp|ids|user|comment&format=json' % WIKIPEDIA_PAGE_IDS
@@ -77,7 +89,7 @@ def run():
             user = latest_revision['user']
             twitter_message = "%s edited the '%s' article: %s" % (user, title, shortened_url)
 
-            print twitter_message
+            logging.info(twitter_message)
 
             # tweet message
             api.update_status(twitter_message)
@@ -87,6 +99,7 @@ def run():
             # In other words, we will want to check if no new edits were made since the last request.
             # If no new edits were made since the last request, then we won't tweet anything.
             store_latest_revision_id(page_id, latest_revision)
+
 
 def build_wikipedia_revision_url(article_title, revision):
     ''' Build the wikipedia revision diff URL.
@@ -160,4 +173,4 @@ while True:
 
     # Wait for a bit before checking if there are any new edits.
     # But not too much that we would risk missing an edits (because we only look at the latest edit for now)
-    sleep(SLEEP_TIME)
+    sleep(float(SLEEP_TIME))
