@@ -44,8 +44,6 @@ def run():
     ''' The main program function.
     '''
 
-    logging.info("Application started.")
-
     # Build a list of monitored page ids:
     page_ids = WIKIPEDIA_PAGE_IDS.split('|')
 
@@ -163,10 +161,13 @@ def store_latest_revision_id(page_id, revision):
         revision_tracker_config.write(configfile)
 
 
+
+logging.info("Application started.")
+logging.info("Observing the following pages: " + WIKIPEDIA_PAGE_IDS.replace('|', ', '))
+
 # Infinite application loop, commence!
 while True:
     try:
-        logging.info("Observing the following pages: " + WIKIPEDIA_PAGE_IDS.replace('|', ', '))
         run()
     except:
         logging.exception("An error occured wile polling for changes.")
