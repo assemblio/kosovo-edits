@@ -1,2 +1,4 @@
 source ./venv/bin/activate
-python main.py
+python main.py &
+echo $! > pid
+exit 0
