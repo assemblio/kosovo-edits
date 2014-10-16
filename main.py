@@ -58,8 +58,6 @@ def run():
     json_response = json.load(response)
 
     # Iterate through the revision info of every page listed in the response
-    pages = json_response['query']['pages']
-
     for page_id in page_ids:
 
         # Get the title.
@@ -108,7 +106,6 @@ def build_wikipedia_revision_url(article_title, revision):
     '''
     rev_id = revision['revid']
     parent_id = revision['parentid']
-    #user = revision['user']
 
     url = "http://en.wikipedia.org/w/index.php?title=%s&diff=%d&oldid=%d" % (article_title, rev_id, parent_id)
 
@@ -169,7 +166,10 @@ def store_latest_revision_id(page_id, revision):
 
 # Infinite application loop, commence!
 while True:
-    run()
+    try:
+        run()
+    except:
+        logging.exception("An error occured wile polling for changes.")
 
     # Wait for a bit before checking if there are any new edits.
     # But not too much that we would risk missing an edits (because we only look at the latest edit for now)
