@@ -48,7 +48,6 @@ def run():
 
     # Build a list of monitored page ids:
     page_ids = WIKIPEDIA_PAGE_IDS.split('|')
-    logging.info("Observing the following pages: " + WIKIPEDIA_PAGE_IDS.replace('|', ', '))
 
     # Build the GET request URL to hit Wikipedia's API
     wikipedia_latest_revision_api_request_url = 'http://en.wikipedia.org/w/api.php?action=query&prop=revisions&pageids=%s&rvprop=timestamp|ids|user|comment&format=json' % WIKIPEDIA_PAGE_IDS
@@ -167,6 +166,7 @@ def store_latest_revision_id(page_id, revision):
 # Infinite application loop, commence!
 while True:
     try:
+        logging.info("Observing the following pages: " + WIKIPEDIA_PAGE_IDS.replace('|', ', '))
         run()
     except:
         logging.exception("An error occured wile polling for changes.")
